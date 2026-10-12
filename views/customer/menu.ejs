@@ -1,0 +1,309 @@
+<!-- ==========================================================================
+ * FILE: views/customer/menu.ejs
+ * DESCRIPTION: หน้ารายการเมนูอาหารฝั่งลูกค้า จัดหมวดหมู่น้ำซุป วัตถุดิบ ของทานเล่น เครื่องดื่ม 
+ *              และจดจำตำแหน่งเลื่อนจอ
+ * ========================================================================== -->
+
+<!-- ==========================================
+ * SECTION 1: PARTIAL INCLUDES & HEAD SETUP
+ * ========================================== -->
+<%- include('../partials/head', { css: 'customer', title: 'เมนูอาหาร' }) %>
+<style>
+  body.is-restoring { opacity: 0; }
+</style>
+<body>
+
+<!-- สคริปต์ซ่อนหน้าจอชั่วคราวระหว่างเตรียมคืนตำแหน่งเลื่อน Scroll -->
+<script>
+  const scrollKey = 'menuScrollPosition_<%= table.Table_ID %>';
+  if (sessionStorage.getItem(scrollKey)) {
+    document.body.classList.add('is-restoring');
+  }
+</script>
+
+<div class="phone menu-page">
+
+  <!-- ==========================================
+   * SECTION 2: WELCOME BANNER & TOAST NOTIFICATION
+   * ========================================== -->
+  <%- include('../partials/customer-header') %>
+
+  <!-- ป๊อปอัปแจ้งเตือนเมื่อเพิ่มเมนูลงตะกร้าสำเร็จ -->
+  <% if (added) { %>
+    <div class="toast" role="status">เพิ่ม "<%= added %>" ลงตะกร้าแล้ว</div>
+  <% } %>
+
+  <!-- แบนเนอร์ยินดีต้อนรับ -->
+  <section class="welcome" id="sec-all">
+    <div>
+      <h2>ยินดีต้อนรับ</h2>
+      <p>เลือกเมนูที่คุณต้องการได้เลย</p>
+    </div>
+    <div class="welcome-bowl">🥘</div>
+  </section>
+
+  <!-- ==========================================
+   * SECTION 3: STICKY CATEGORY TABS
+   * ========================================== -->
+  <!-- แถบเมนูหมวดหมู่หลักติดบนหน้าจอขณะ Scroll -->
+  <nav class="tabs sticky-tabs" id="menuTabs">
+    <a href="#sec-all" class="tab-link active">ทั้งหมด</a>
+    <a href="#sec-soup" class="tab-link">ซุป</a>
+    <a href="#sec-raw" class="tab-link">วัตถุดิบ</a>
+    <a href="#sec-snack" class="tab-link">ของทานเล่น</a>
+    <a href="#sec-drink" class="tab-link">เครื่องดื่ม</a>
+  </nav>
+
+  <!-- ==========================================
+   * SECTION 4: SOUP SELECTION GRID
+   * ========================================== -->
+  <!-- ส่วนแสดงรายการน้ำซุปแบบการ์ดตาราง -->
+  <section id="sec-soup" class="menu-section">
+    <h3 class="section-title">🍲 เลือกประเภทน้ำซุป</h3>
+    <div class="soup-grid">
+      <% menus.filter(function (m) { return m.group === 'soup'; }).forEach(function (m) { %>
+        <a class="soup-card <%= m.soldOut ? 'soldout' : '' %>" href="/table/<%= table.Table_ID %>/item/<%= m.Menu_ID %>">
+          <div class="soup-img">
+            <% if (m.Image_URL) { %><img src="<%= m.Image_URL %>" alt="<%= m.Menu_Name %>"><% } else { %><%= CATEGORY_ICON[m.Category_Name] %><% } %>
+          </div>
+          <% if (m.soldOut) { %><span class="soldout-tag">สินค้าหมด</span><% } %>
+          <h4><%= m.Menu_Name %></h4>
+          <span class="price"><%= baht(m.Price) %> บาท</span>
+        </a>
+      <% }) %>
+    </div>
+  </section>
+
+  <!-- ==========================================
+   * SECTION 5: RAW INGREDIENTS WITH SIDEBAR CATEGORIES
+   * ========================================== -->
+  <!-- ส่วนแสดงรายการวัตถุดิบสดพร้อมแถบหมวดย่อยด้านข้าง -->
+  <%
+    var rawCats = categories.filter(function (c) {
+      return c.group === 'raw' || menus.some(function (m) { return m.Category_ID === c.Category_ID && m.group === 'raw'; });
+    });
+  %>
+  <% if (rawCats.length > 0) { %>
+    <section id="sec-raw" class="menu-section" style="padding-bottom: 0;">
+      <div class="raw-wrap">
+
+        <!-- แถบด้านข้างสำหรับกรองหมวดย่อยวัตถุดิบ -->
+        <aside class="raw-side raw-sidebar" id="rawSidebar">
+          <% rawCats.forEach(function (c, index) { %>
+            <% var catMenus = menus.filter(function (m) { return m.Category_ID === c.Category_ID; }); %>
+            <% if (catMenus.length > 0) { %>
+              <a href="#cat-<%= c.Category_ID %>" class="raw-tab-link <%= index === 0 ? 'active' : '' %>"><%= c.Category_Name %></a>
+            <% } %>
+          <% }) %>
+        </aside>
+
+        <!-- รายการวัตถุดิบแบ่งตามหมวดย่อย -->
+        <div class="raw-content">
+          <% rawCats.forEach(function (c) { %>
+            <% var catMenus = menus.filter(function (m) { return m.Category_ID === c.Category_ID; }); %>
+            <% if (catMenus.length > 0) { %>
+              <div id="cat-<%= c.Category_ID %>" class="raw-category-section">
+                <h3 class="section-title" style="font-size: 15px; color: var(--chili);">
+                  <%= CATEGORY_ICON[c.Category_Name] || '' %> <%= c.Category_Name %>
+                </h3>
+                <div class="raw-list" style="padding-top: 4px;">
+                  <% catMenus.forEach(function (m) { %>
+                    <%- include('menu-row', { m: m }) %>
+                  <% }) %>
+                </div>
+              </div>
+            <% } %>
+          <% }) %>
+        </div>
+
+      </div>
+    </section>
+  <% } %>
+
+  <!-- ==========================================
+   * SECTION 6: SNACK & DRINK SECTIONS
+   * ========================================== -->
+  <!-- ส่วนแสดงรายการของทานเล่นและเครื่องดื่ม -->
+  <%
+    var otherSections = [
+      { id: 'sec-snack', key: 'snack', name: '🍡 ของทานเล่น' },
+      { id: 'sec-drink', key: 'drink', name: '🥤 เครื่องดื่ม' }
+    ];
+  %>
+
+  <% otherSections.forEach(function (s) { %>
+    <section id="<%= s.id %>" class="menu-section">
+      <h3 class="section-title"><%= s.name %></h3>
+      <%
+        var sectionMenus = menus.filter(function (m) { return m.group === s.key; });
+        var groupCats = categories.filter(function (c) {
+          return c.group === s.key || sectionMenus.some(function (m) { return m.Category_ID === c.Category_ID; });
+        });
+      %>
+
+      <% if (groupCats.length > 0) { %>
+        <% groupCats.forEach(function (c) { %>
+          <% var catMenus = sectionMenus.filter(function (m) { return m.Category_ID === c.Category_ID; }); %>
+          <% if (catMenus.length > 0) { %>
+            <div class="raw-list">
+              <% catMenus.forEach(function (m) { %>
+                <%- include('menu-row', { m: m }) %>
+              <% }) %>
+            </div>
+          <% } %>
+        <% }) %>
+
+      <% } else if (sectionMenus.length > 0) { %>
+        <div class="raw-list">
+          <% sectionMenus.forEach(function (m) { %>
+            <%- include('menu-row', { m: m }) %>
+          <% }) %>
+        </div>
+
+      <% } else { %>
+        <p style="padding: 12px 16px; color: var(--muted); font-size: 14px;">ยังไม่มีรายการในหมวดหมู่นี้</p>
+      <% } %>
+    </section>
+  <% }) %>
+
+  <!-- ==========================================
+   * SECTION 7: BOTTOM FLOATING CART BAR
+   * ========================================== -->
+  <!-- แถบปุ่มทางไปตะกร้าสินค้าแบบลอยด้านล่าง (แสดงเมื่อมีสินค้าในตะกร้า) -->
+  <% if (cartCount > 0) { %>
+    <div class="bottom-bar">
+      <a class="bar-btn" href="/table/<%= table.Table_ID %>/cart">
+        <span>🛒 ตะกร้าสินค้า <span class="bar-count"><%= cartCount %></span></span>
+        <span><%= baht(cartTotal) %> บาท</span>
+      </a>
+    </div>
+  <% } %>
+</div>
+
+<!-- ==========================================
+ * SECTION 8: SCROLLSPY, TAB NAVIGATION & SCROLL RESTORE SCRIPT
+ * ========================================== -->
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const mainNavLinks = document.querySelectorAll('#menuTabs .tab-link');
+    const mainSections = document.querySelectorAll('.menu-section, #sec-all');
+    const rawTabLinks = document.querySelectorAll('#rawSidebar .raw-tab-link');
+    const rawSections = document.querySelectorAll('.raw-category-section');
+
+    let isClickScrolling = false;
+
+    // 8.1 ควบคุมการเลื่อนเมื่อคลิกแท็บหมวดหมู่หลัก
+    mainNavLinks.forEach(function (link) {
+      link.addEventListener('click', function (e) {
+        const targetId = this.getAttribute('href');
+        if (!targetId || targetId === '#') return;
+
+        const targetEl = document.querySelector(targetId);
+        if (targetEl) {
+          e.preventDefault();
+          isClickScrolling = true;
+
+          mainNavLinks.forEach(l => l.classList.remove('active'));
+          this.classList.add('active');
+          this.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+
+          const targetY = targetEl.getBoundingClientRect().top + window.scrollY - 100;
+          window.scrollTo({ top: targetY, behavior: 'smooth' });
+
+          setTimeout(function () { isClickScrolling = false; }, 800);
+        }
+      });
+    });
+
+    // 8.2 ควบคุมการเลื่อนเมื่อคลิกแท็บหมวดหมู่อย่อยวัตถุดิบ
+    rawTabLinks.forEach(function (link) {
+      link.addEventListener('click', function (e) {
+        const targetId = this.getAttribute('href');
+        if (!targetId || targetId === '#') return;
+
+        const targetEl = document.querySelector(targetId);
+        if (targetEl) {
+          e.preventDefault();
+          isClickScrolling = true;
+
+          rawTabLinks.forEach(l => l.classList.remove('active'));
+          this.classList.add('active');
+
+          const targetY = targetEl.getBoundingClientRect().top + window.scrollY - 110;
+          window.scrollTo({ top: targetY, behavior: 'smooth' });
+
+          setTimeout(function () { isClickScrolling = false; }, 800);
+        }
+      });
+    });
+
+    // 8.3 ระบบติดตามไฮไลท์แท็บตามตำแหน่งที่เลื่อนดูบนจอ
+    function onScroll() {
+      if (isClickScrolling) return;
+
+      const scrollPosition = window.scrollY + 140;
+      const isAtBottom = (window.innerHeight + window.scrollY) >= (document.documentElement.scrollHeight - 80);
+      let currentMainId = 'sec-all';
+
+      if (isAtBottom && mainSections.length > 0) {
+        currentMainId = mainSections[mainSections.length - 1].getAttribute('id');
+      } else {
+        mainSections.forEach(function (section) {
+          if (scrollPosition >= section.offsetTop) {
+            currentMainId = section.getAttribute('id');
+          }
+        });
+      }
+
+      mainNavLinks.forEach(function (link) {
+        if (link.getAttribute('href') === '#' + currentMainId) {
+          if (!link.classList.contains('active')) {
+            mainNavLinks.forEach(l => l.classList.remove('active'));
+            link.classList.add('active');
+            link.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+          }
+        }
+      });
+
+      let currentRawId = '';
+      rawSections.forEach(function (section) {
+        if (scrollPosition >= section.offsetTop - 30) {
+          currentRawId = section.getAttribute('id');
+        }
+      });
+
+      if (currentRawId) {
+        rawTabLinks.forEach(function (link) {
+          if (link.getAttribute('href') === '#' + currentRawId) {
+            if (!link.classList.contains('active')) {
+              rawTabLinks.forEach(l => l.classList.remove('active'));
+              link.classList.add('active');
+            }
+          }
+        });
+      }
+    }
+
+    window.addEventListener('scroll', onScroll);
+
+    // 8.4 ระบบจดจำตำแหน่ง Scroll เพื่อคืนค่าตำแหน่งเดิมเมื่อย้อนกลับมาหน้าเมนู
+    const savedPos = sessionStorage.getItem(scrollKey);
+    if (savedPos) {
+      sessionStorage.removeItem(scrollKey);
+      setTimeout(() => {
+        window.scrollTo({ top: parseInt(savedPos, 10), behavior: 'instant' });
+        document.body.style.transition = 'opacity 0.25s ease-out';
+        document.body.classList.remove('is-restoring');
+      }, 50);
+    }
+
+    window.addEventListener('pagehide', function () {
+      sessionStorage.setItem(scrollKey, window.scrollY);
+    });
+    window.addEventListener('beforeunload', function () {
+      sessionStorage.setItem(scrollKey, window.scrollY);
+    });
+  });
+</script>
+</body>
+</html>

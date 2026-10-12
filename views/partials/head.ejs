@@ -1,0 +1,39 @@
+<!-- ==========================================================================
+ * FILE: views/partials/head.ejs
+ * DESCRIPTION: ส่วนกำหนดค่า <head> หลักที่ใช้ร่วมกันทุกหน้าในระบบ รวมการโหลด ฟอนต์, Meta Tags, Base CSS และ CSS เฉพาะหน้า
+ * ========================================================================== -->
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <!-- ==========================================
+   * SECTION 1: META TAGS & TITLE SETUP
+   * ========================================== -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= title %> | หม่าล่า Self Service</title>
+
+  <!-- ==========================================
+   * SECTION 2: FONTS & EXTERNAL STYLES
+   * ========================================== -->
+  <!-- โหลด Google Fonts (Kanit & Sarabun) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- ==========================================
+   * SECTION 3: LOCAL CSS STYLESHEETS & AUTO REFRESH
+   * ========================================== -->
+  <!-- โหลด base.css หลักเสมอ -->
+  <link rel="stylesheet" href="/css/base.css">
+
+  <!-- โหลดสไตล์ชีตเฉพาะหน้าเพิ่มเติม -->
+  <% if (typeof css !== 'undefined') { %>
+  <link rel="stylesheet" href="/css/<%= css %>.css">
+  <% } %>
+
+  <!-- รีเฟรชหน้าจออัตโนมัติตามช่วงเวลา  -->
+  <% if (typeof refresh !== 'undefined' && refresh) { %>
+  <meta http-equiv="refresh" content="<%= refresh %>">
+  <% } %>
+</head>

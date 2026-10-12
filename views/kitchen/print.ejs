@@ -1,0 +1,261 @@
+<!-- ==========================================================================
+ * FILE: views/kitchen/print.ejs
+ * DESCRIPTION: ใบเสร็จรับเงิน / ใบรายการอาหาร รูปแบบสลิปความร้อนตามมาตรฐาน
+ * ========================================================================== -->
+
+<%- include('../partials/head', {css: 'kitchen', title: 'ใบเสร็จ ' + orderNo(order.Reference_Code) }) %>
+
+<style>
+  body {
+    background-color: #f4f4f4;
+    font-family: 'Courier New', Courier, monospace;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    margin: 0;
+    color: #000;
+  }
+
+  .receipt {
+    background: #fff;
+    width: 320px;
+    padding: 24px 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    font-size: 13px;
+    line-height: 1.4;
+    box-sizing: border-box;
+  }
+
+  .receipt-header {
+    text-align: center;
+    margin-bottom: 16px;
+  }
+
+  .receipt-header h2 {
+    margin: 0 0 4px 0;
+    font-size: 18px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .receipt-header p {
+    margin: 2px 0;
+    font-size: 12px;
+  }
+
+  .receipt-info {
+    margin-bottom: 12px;
+    font-size: 12px;
+  }
+
+  .receipt-info div {
+    margin-bottom: 2px;
+  }
+
+  .dashed-line {
+    border-bottom: 1px dashed #000;
+    margin: 10px 0;
+  }
+
+  .item-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  .item-table th {
+    text-align: left;
+    padding-bottom: 6px;
+    font-weight: bold;
+  }
+
+  .item-table th.qty {
+    width: 12%;
+  }
+
+  .item-table th.item {
+    width: 58%;
+  }
+
+  .item-table th.price {
+    width: 30%;
+    text-align: right;
+  }
+
+  .item-table td {
+    vertical-align: top;
+    padding: 4px 0;
+  }
+
+  .item-table td.qty {
+    text-align: left;
+  }
+
+  .item-table td.price {
+    text-align: right;
+  }
+
+  .item-note {
+    font-size: 11px;
+    color: #555;
+    padding-left: 6px;
+  }
+
+  .summary-section {
+    width: 100%;
+    margin-top: 8px;
+    font-size: 12px;
+  }
+
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  .summary-row.total {
+    font-size: 15px;
+    font-weight: bold;
+    margin-top: 6px;
+  }
+
+  .receipt-footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 12px;
+  }
+
+  .receipt-footer p {
+    margin: 2px 0;
+  }
+
+  .no-print {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+  }
+
+  @media print {
+    body {
+      background: none;
+      padding: 0;
+    }
+    .receipt {
+      box-shadow: none;
+      width: 100%;
+      max-width: 80mm;
+      padding: 0;
+    }
+    .no-print {
+      display: none !important;
+    }
+  }
+</style>
+
+<body>
+
+<div class="receipt">
+  <!-- Header ร้านค้า -->
+  <div class="receipt-header">
+    <h2>หม่าล่า SELF SERVICE</h2>
+    <p>1 CHALONGKRUNG RD.</p>
+    <p>Bangkok, Thailand</p>
+  </div>
+
+  <!-- ข้อมูลวัน เวลา โต๊ะ/สั่งกลับบ้าน -->
+  <div class="receipt-info">
+    <div><b>Date:</b> <%= order.Order_Date || '' %>, <%= order.Order_Time || '' %> น.</div>
+    <div><b>Order:</b> #<%= orderNo(order.Reference_Code) %></div>
+    <div>
+      <b>Type:</b> 
+      <% if (!order.Table_Number || order.Order_type === 'กลับบ้าน') { %>
+        กลับบ้าน
+      <% } else { %>
+        โต๊ะ <%= order.Table_Number %>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="dashed-line"></div>
+
+  <!-- หัวตารางรายการ -->
+  <table class="item-table">
+    <thead>
+      <tr>
+        <th class="qty">QTY</th>
+        <th class="item">ITEM</th>
+        <th class="price">PRICE</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% var subtotal = 0; %>
+      <% order.items.forEach(function (it) { %>
+        <% 
+          var itemSubtotal = it.Subtotal || (it.Quantity * it.Unit_Price) || 0;
+          subtotal += itemSubtotal;
+        %>
+        <tr>
+          <td class="qty"><%= it.Quantity %></td>
+          <td class="item">
+            <%= it.Menu_Name %>
+            <% if (it.Spiciness_Level) { %>
+              <div class="item-note">- <%= it.Spiciness_Level %></div>
+            <% } %>
+            <% if (it.Special_Note) { %>
+              <div class="item-note">- <%= it.Special_Note %></div>
+            <% } %>
+          </td>
+          <td class="price"><%= Number(itemSubtotal).toFixed(2) %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+
+  <div class="dashed-line"></div>
+
+  <!-- สรุปยอดเงิน -->
+  <% 
+    var tax = subtotal * 0.07;
+    var grandTotal = subtotal + tax;
+  %>
+  <div class="summary-section">
+    <div class="summary-row">
+      <span>Subtotal:</span>
+      <span><%= Number(subtotal).toFixed(2) %></span>
+    </div>
+    <div class="summary-row">
+      <span>Tax (7%):</span>
+      <span><%= Number(tax).toFixed(2) %></span>
+    </div>
+    <div class="summary-row total">
+      <span>TOTAL:</span>
+      <span><%= Number(grandTotal).toFixed(2) %></span>
+    </div>
+  </div>
+
+  <div class="dashed-line"></div>
+
+  <!-- ท้ายใบเสร็จ -->
+  <div class="receipt-footer">
+    <p>Thank you for your purchase!</p>
+    <p>Please come again</p>
+  </div>
+</div>
+
+<!-- ปุ่มสำหรับควบคุมการพิมพ์ -->
+<div class="no-print">
+  <button class="btn btn-red" onclick="window.print()">🖨️ พิมพ์อีกครั้ง</button>
+  <button class="btn btn-light" onclick="window.close()">ปิด</button>
+</div>
+
+<!-- สคริปต์สั่งพิมพ์อัตโนมัติเมื่อเปิดหน้าเว็บ -->
+<script>
+  window.onload = function () { 
+    window.print(); 
+  };
+</script>
+
+</body>
+</html>

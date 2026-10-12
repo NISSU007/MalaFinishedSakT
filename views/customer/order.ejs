@@ -1,0 +1,162 @@
+<!-- ==========================================================================
+ * FILE: views/customer/order.ejs
+ * DESCRIPTION: หน้าติดตามสถานะคำสั่งซื้อสำหรับลูกค้า
+ *              แสดงป้ายสถานะ, ลำดับขั้นตอนการปรุง, รายละเอียดรายการอาหาร
+ *              และระบบแจ้งเตือนเมื่ออาหารพร้อมเสิร์ฟ
+ * ========================================================================== -->
+
+<!-- ==========================================
+ * SECTION 1: PARTIAL INCLUDES & STEP CALCULATION
+ * ========================================== -->
+<%- include('../partials/head', { css: 'customer', title: 'ติดตามสถานะคำสั่งซื้อ' }) %>
+
+<body>
+<div class="phone order-page">
+
+  <!-- แถบส่วนหัวแสดงโลโก้ร้านและหมายเลขโต๊ะ -->
+  <%- include('../partials/customer-header') %>
+
+  <%
+    // คำนวณระดับขั้นตอนตามสถานะออเดอร์
+    var s = order.Order_Status;
+    var step = 0;
+    if (s === STATUS.PREPARING || s === STATUS.COOKED) step = 1;
+    if (s === STATUS.READY) step = 2;
+    if (s === STATUS.DONE) step = 3;
+
+    // กำหนดข้อความและสีป้ายสถานะ
+    var badgeText = s === STATUS.COOKED ? STATUS.PREPARING : s;
+    var badgeClass = step === 0 ? 'badge-red' : step === 1 ? 'badge-amber' : 'badge-green';
+  %>
+
+  <!-- ==========================================
+   * SECTION 2: ORDER REFERENCE & STATUS BADGE
+   * ========================================== -->
+  <!-- ส่วนแสดงหมายเลขออเดอร์และป้ายสถานะปัจจุบัน -->
+  <section class="track-head">
+    <div>
+      <div class="muted">หมายเลขออเดอร์</div>
+      <div class="no">#<%= orderNo(order.Reference_Code) %></div>
+    </div>
+    <span class="badge <%= badgeClass %>" id="statusBadge"><%= badgeText %></span>
+  </section>
+
+  <!-- ==========================================
+   * SECTION 3: STEPPER PROGRESS BAR
+   * ========================================== -->
+  <!-- แถบแสดงความคืบหน้าขั้นตอนสั่งซื้อและปรุงอาหาร (3 ขั้น) -->
+  <div class="stepper">
+    <div class="step <%= step >= 1 ? 'done' : 'now' %>"><span class="dot">💳</span>ชำระเงิน</div>
+    <div class="step <%= step >= 2 ? 'done' : step === 1 ? 'now' : '' %>"><span class="dot">🍳</span>กำลังเตรียมอาหาร</div>
+    <div class="step <%= step >= 3 ? 'done' : step === 2 ? 'now' : '' %>"><span class="dot">🍲</span>พร้อมรับอาหาร</div>
+  </div>
+
+  <!-- ==========================================
+   * SECTION 4: STATUS ALERT MESSAGES
+   * ========================================== -->
+  <!-- กล่องแสดงข้อความคำแนะนำตามสถานะออเดอร์ -->
+  <div style="padding:0 16px">
+    <% if (step === 0) { %>
+      <div class="alert alert-red">รอชำระเงิน · แจ้งเลขอ้างอิง <b><%= order.Reference_Code %></b> ที่เคาน์เตอร์</div>
+    <% } else if (step === 2) { %>
+      <div class="alert alert-green">อาหารพร้อมแล้ว! กรุณารับอาหารที่เคาน์เตอร์</div>
+    <% } else if (step === 3) { %>
+      <div class="alert alert-green">รับอาหารเรียบร้อย ขอให้อร่อยนะคะ 🙏</div>
+    <% } %>
+  </div>
+
+  <!-- ==========================================
+   * SECTION 5: ORDER ITEM DETAILS
+   * ========================================== -->
+  <!-- กล่องแสดงรายละเอียดรายการอาหารและยอดรวมทั้งหมด -->
+  <section class="detail-box">
+    <h3>รายละเอียดคำสั่งซื้อ</h3>
+
+    <% order.items.forEach(function (it) { %>
+      <div class="detail-row">
+        <div>
+          <% if (it.Image_URL) { %>
+            <img src="<%= it.Image_URL %>" alt="<%= it.Menu_Name %>" style="width: 28px; height: 28px; object-fit: cover; border-radius: 6px; vertical-align: middle; margin-right: 6px;">
+          <% } else { %>
+            <%= CATEGORY_ICON[it.Category_Name] || '🍽' %>
+          <% } %>
+          <%= it.Menu_Name %>
+
+          <!-- แสดงประเภทน้ำซุปกรณีซุปผสม 2 ประเภท -->
+          <% if (it.Soup_Type && (it.Menu_Name.includes('2') || it.Soup_Type.includes('+'))) { %>
+            <small style="display:block; color:#555; margin-top:2px;">น้ำซุป: <%= it.Soup_Type %></small>
+          <% } %>
+
+          <% if (it.Spiciness_Level) { %><small style="color: #d9362b">️ 🌶 <%= it.Spiciness_Level %></small><% } %>
+          <% if (it.Special_Note) { %><small><%= it.Special_Note %></small><% } %>
+        </div>
+        <div class="r"><%= it.Quantity %> ชุด</div>
+        <div class="r"><%= baht(it.Subtotal) %> บาท</div>
+      </div>
+    <% }) %>
+
+    <!-- สรุปยอดรวมราคาทั้งหมด -->
+    <div class="detail-row" style="font-family:var(--font-head);font-weight:600">
+      <div>ยอดรวม</div><div></div><div class="r"><%= baht(order.Total_Price) %> บาท</div>
+    </div>
+  </section>
+
+  <!-- ==========================================
+   * SECTION 6: NOTICE BAR
+   * ========================================== -->
+  <!-- แถบแจ้งเตือนให้ลูกค้ารอเปิดหน้าจอนี้ไว้ -->
+  <div class="notice-bar">
+    <span class="bell">🔔</span>
+    <span>เมื่ออาหารพร้อมรับ จะมีแจ้งเตือนขึ้นบนหน้าจอนี้ กรุณาเปิดหน้านี้ไว้</span>
+  </div>
+
+  <!-- ==========================================
+   * SECTION 7: READY NOTIFICATION MODAL
+   * ========================================== -->
+  <!-- ป๊อปอัปแจ้งเตือนเมื่ออาหารพร้อมเสิร์ฟ (จะแสดงขึ้นมาเมื่อถูกเรียกใช้สคริปต์) -->
+  <div class="modal-bg hidden" id="readyModal" role="dialog" aria-modal="true" aria-labelledby="readyTitle">
+    <div class="modal">
+      <div class="big">🔔</div>
+      <h2 id="readyTitle">อาหารพร้อมเสิร์ฟแล้ว!</h2>
+      <p>ออเดอร์ <b>#<%= orderNo(order.Reference_Code) %></b><br>กรุณารับอาหารที่เคาน์เตอร์</p>
+      <button class="btn btn-red btn-block" onclick="closeModal()">รับทราบ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==========================================
+ * SECTION 8: AUTO-POLLING & MODAL SCRIPT
+ * ========================================== -->
+<!-- สคริปต์ตรวจจับสถานะออเดอร์และแสดงป๊อปอัปอัตโนมัติ -->
+<script>
+  const orderId = <%= order.Order_ID %>;
+  let lastStatus = '<%= order.Order_Status %>';
+  let seenNotify = Number(sessionStorage.getItem('seen-' + orderId) || 0);
+  let currentNotify = <%= typeof notify !== 'undefined' ? (notify || 0) : 0 %>;
+
+  function showModal() {
+    document.getElementById('readyModal').classList.remove('hidden');
+  }
+
+  function closeModal() {
+    document.getElementById('readyModal').classList.add('hidden');
+    seenNotify = currentNotify;
+    sessionStorage.setItem('seen-' + orderId, seenNotify);
+  }
+
+  if (lastStatus === '<%= STATUS.READY %>' && currentNotify > seenNotify) showModal();
+
+  // สอบถามสถานะออเดอร์ไปยัง Server
+  setInterval(function () {
+    fetch('/api/order/' + orderId)
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.ok) return;
+        if (data.status !== lastStatus) { location.reload(); return; }
+        currentNotify = data.notify;
+        if (data.status === '<%= STATUS.READY %>' && data.notify > seenNotify) showModal();
+      });
+  }, 1000);
+</script>
+</body>
+</html>

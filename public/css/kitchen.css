@@ -1,0 +1,228 @@
+/* ==========================================
+ * FILE: public/css/kitchen.css
+ * DESCRIPTION: สไตล์ชีตระบบฝั่งห้องครัว จัดการแสดงผลตั๋วปรุงอาหาร , แท็บสถานะครัว
+ * ========================================== */
+
+/* ==========================================
+ * SECTION 1: FILTER TOOLBAR & TABS
+ * ========================================== */
+.kitchen-toolbar {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.kitchen-tabs { display: flex; gap: 10px; flex: 1; }
+
+.kitchen-tab {
+  flex: 1;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 12px;
+  background: #fff;
+  color: #333;
+  padding: 10px 16px;
+  font-family: var(--font-head);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,.03);
+  transition: all .18s ease;
+}
+
+.kitchen-tab b { font-size: 22px; font-weight: 700; margin: 0 2px; }
+.kitchen-tab span { font-size: 12px; font-weight: 400; opacity: .8; }
+
+.kitchen-tab.preparing-tab { background: #fff9db; border-color: #f4cc3d; color: #9e6b00; }
+.kitchen-tab.preparing-tab.active { 
+  background: #f59e0b;
+  border: 2px solid #d97706;
+  color: #ffffff; 
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+}
+.kitchen-tab.preparing-tab.active span { color: rgba(255, 255, 255, 0.95); }
+
+.kitchen-tab.cooked-tab { background: #f4faf6; border-color: #b3e3c1; color: #1e6b3b; }
+.kitchen-tab.cooked-tab.active { background: #267a47; border: 2px solid #1e6b3b; color: #ffffff; box-shadow: 0 4px 14px rgba(38, 122, 71, 0.25); }
+.kitchen-tab.cooked-tab.active span { color: rgba(255, 255, 255, 0.9); }
+
+.kitchen-tab.done-tab { background: #fafafa; border-color: #e0e0e0; color: #555; }
+.kitchen-tab.done-tab.active { background: #e8e8e8; border: 2px solid #777; color: #222; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); }
+
+.kitchen-tab:hover { transform: translateY(-2px); }
+
+/* ==========================================
+ * SECTION 2: SEARCH & ORDER CARDS GRID
+ * ========================================== */
+.kitchen-search {
+  width: 245px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1.5px solid #d7d7d7;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0 14px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.04);
+}
+
+.kitchen-search input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-head);
+  font-size: 14px;
+}
+
+.kitchen-search:focus-within {
+  border-color: var(--chili);
+  box-shadow: 0 0 0 3px rgba(217,54,43,.09);
+}
+
+.order-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px;
+}
+
+.o-card { 
+  background: var(--paper); 
+  border: 1.5px solid var(--ink); 
+  border-radius: var(--radius); 
+  padding: 14px; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 6px; 
+  text-decoration: none; 
+  color: inherit;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.o-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.08); }
+.o-card.selected { 
+  border: 3px solid var(--chili);
+  box-shadow: 0 8px 22px rgba(217, 54, 43, 0.15);
+}
+
+.o-card-head { display: flex; justify-content: space-between; align-items: baseline; }
+.o-no { font-family: var(--font-head); font-size: 24px; font-weight: 700; letter-spacing: .5px; }
+
+.o-meta { 
+  display: flex; 
+  justify-content: space-between; 
+  color: var(--muted); 
+  font-size: 14px; 
+  border-bottom: 1px solid black; 
+  padding-bottom: 8px;                  
+  margin-bottom: 4px;
+}
+
+.o-items { list-style: none; padding: 0; margin: 4px 0; font-size: 15px; }
+.o-items li { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; }
+.o-items .spice { color: var(--chili); font-size: 13px; }
+
+.o-note { background: #fff8d9; border: 1px solid #f0dc8a; border-radius: 6px; padding: 3px 8px; font-size: 13px; }
+.o-actions { display: flex; gap: 8px; margin-top: auto; padding-top: 6px; }
+.o-actions .btn { flex: 1; }
+
+/* ==========================================
+ * SECTION 3: KITCHEN DETAIL TABLE & SLIP
+ * ========================================== */
+.items-table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.items-table th { text-align: left; font-family: var(--font-head); font-weight: 500; color: var(--muted); border-bottom: 1.5px solid var(--ink); padding: 6px 4px; }
+.items-table td { padding: 8px 4px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.items-table .r { text-align: right; }
+.items-table tfoot td { font-family: var(--font-head); font-weight: 600; font-size: 17px; border-bottom: 0; }
+
+.detail-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.detail-head .badge { margin-left: auto; white-space: nowrap; }
+
+/* ใบตั๋วพิมพ์รายการสำหรับห้องครัว */
+.slip { width: 300px; margin: 20px auto; background: #fff; padding: 16px; font-size: 14px; border: 1px dashed #999; }
+.slip h2 { text-align: center; font-size: 18px; }
+.slip .big { text-align: center; font-family: var(--font-head); font-size: 34px; font-weight: 700; margin: 6px 0; }
+.slip table { width: 100%; border-collapse: collapse; }
+.slip td { padding: 4px 0; border-bottom: 1px dashed #ccc; vertical-align: top; }
+.slip .r { text-align: right; }
+.slip-actions { text-align: center; }
+
+/* ==========================================
+ * SECTION 4: VERTICAL STEPPER (VSTEP)
+ * ========================================== */
+.vstep {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0;
+  border-left: 3px solid #e0e0e0;
+  margin-left: 15px;
+}
+
+.vstep li {
+  padding: 8px 0 16px 20px;
+  position: relative;
+  font-size: 16px;
+  color: #888;
+}
+
+.vstep .dot {
+  position: absolute;
+  left: -18px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.vstep li.done { color: #1b8a5a; font-weight: bold; }
+.vstep li.done .dot { background-color: #1b8a5a; }
+.vstep li.now { color: #d35400; font-weight: bold; }
+.vstep li.now .dot { background-color: #f39c12; }
+
+/* ==========================================
+ * SECTION 5: RESPONSIVE & UTILITIES
+ * ========================================== */
+.close-x { 
+  display: inline-flex; 
+  align-items: center; 
+  justify-content: center; 
+  width: 26px; 
+  height: 26px; 
+  border-radius: 50%; 
+  color: #888; 
+  font-size: 15px; 
+  text-decoration: none; 
+  transition: background .15s ease; 
+}
+.close-x:hover { background: #f0f0f0; color: #222; }
+
+@media (max-width: 900px) {
+  .kitchen-toolbar { flex-direction: column; }
+  .kitchen-search { width: auto; min-height: 45px; }
+}
+
+@media (max-width: 820px) {
+  .search input { min-width: 0; width: 100%; }
+}
+
+@media (max-width: 650px) {
+  .kitchen-tabs { flex-direction: column; }
+  .kitchen-tab { flex: none; min-height: 46px; }
+}

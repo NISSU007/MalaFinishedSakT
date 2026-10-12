@@ -1,0 +1,176 @@
+<!-- ==========================================================================
+ * FILE: views/counter/notify.ejs
+ * DESCRIPTION: หน้าส่งแจ้งเตือนเรียกรับอาหารและยืนยันการส่งมอบอาหารให้ลูกค้า
+ *              ประกอบด้วยลิสต์ออเดอร์ที่พร้อมเสิร์ฟ และพาเนลรายละเอียดพร้อมปุ่มกดสั่นกระดิ่ง/ปิดออเดอร์
+ * ========================================================================== -->
+
+<!-- ==========================================
+ * SECTION 1: PARTIAL INCLUDES & HEAD SETUP
+ * ========================================== -->
+<%- include('../partials/head', {css: 'counter', title: 'แจ้งเตือนลูกค้า', refresh: list.length === 0 ? 10 : 0 }) %>
+
+<style>
+  /* รองรับการแสดงผลบนหน้าจอขนาดเล็ก (Mobile / Tablet) */
+  @media (max-width: 900px) {
+    .status-layout-grid {
+      grid-template-columns: 1fr !important;
+    }
+    .o-list-container {
+      max-height: none !important;
+      overflow-y: visible !important;
+    }
+    .panel-sticky {
+      position: static !important;
+    }
+  }
+  
+  /* ปรับแต่ง Scrollbar ของลิสต์รายการฝั่งซ้าย */
+  .o-list-container::-webkit-scrollbar { width: 6px; }
+  .o-list-container::-webkit-scrollbar-thumb { background: #d0d0d0; border-radius: 10px; }
+</style>
+
+<body>
+<div class="staff">
+  <!-- แถบส่วนหัวระบบสำหรับพนักงานหน้าเคาน์เตอร์ -->
+  <%- include('../partials/staff-top', { roleLabel: 'หน้าเคาน์เตอร์' }) %>
+
+  <main class="s-main">
+    <!-- ==========================================
+     * SECTION 2: PAGE TITLE & ALERT MESSAGES
+     * ========================================== -->
+    <h1 class="s-title" style="margin-bottom: 20px;">🔔 แจ้งเตือนและยืนยันการรับอาหาร</h1>
+    
+    <!-- กล่องข้อความแจ้งเตือนสถานะการทำงาน -->
+    <% if (message === 'renotify') { %>
+      <div class="alert alert-green" role="status" style="margin-bottom: 24px;">🔔 ส่งแจ้งเตือนซ้ำไปที่หน้าจอลูกค้าแล้ว</div>
+    <% } %>
+    <% if (message === 'done') { %>
+      <div class="alert alert-green" role="status" style="margin-bottom: 24px;">✔ ลูกค้ารับอาหารแล้ว ปิดออเดอร์เรียบร้อย</div>
+    <% } %>
+
+    <!-- ==========================================
+     * SECTION 3: READY ORDERS LIST & EMPTY STATE
+     * ========================================== -->
+    <% if (list.length === 0) { %>
+      <!-- กรณีไม่มีออเดอร์พร้อมเสิร์ฟ -->
+      <div class="empty-order" style="min-height: 350px;">
+        <div class="empty-icon">🍽️</div>
+        <p>ไม่มีออเดอร์ในขณะนี้</p>
+      </div>
+    <% } else { %>
+      <!-- โครงสร้าง Layout สองคอลัมน์ (ซ้าย: ลิสต์ออเดอร์ | ขวา: รายละเอียด) -->
+      <div class="status-layout-grid" style="display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 24px; align-items: start;">
+        
+        <!-- ฝั่งซ้าย: ลิสต์รายการออเดอร์ที่พร้อมเสิร์ฟ -->
+        <section class="o-list-container" style="display: flex; flex-direction: column; gap: 14px; max-height: calc(100vh - 220px); overflow-y: auto; padding-right: 8px;">
+          <% list.forEach(function (o) { %>
+            <% var isSelected = selected && selected.Order_ID === o.Order_ID; %>
+            <a href="?id=<%= o.Order_ID %>" 
+               style="display: flex; flex-direction: column; gap: 14px; padding: 20px; background: #fff; 
+                      border: <%= isSelected ? '3px solid #d9362b' : '2px solid #e8e8e8' %>; 
+                      border-radius: 16px; text-decoration: none; color: inherit; transition: all 0.2s ease;
+                      box-shadow: <%= isSelected ? '0 6px 16px rgba(217, 54, 43, 0.12)' : '0 2px 8px rgba(0,0,0,0.02)' %>;">
+              
+              <!-- เลขออเดอร์, เลขโต๊ะ และเวลาสั่ง -->
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-family: var(--font-head); font-size: 28px; font-weight: 800; color: #111; letter-spacing: 0.5px; line-height: 1;"><%= orderNo(o.Reference_Code) %></span>
+                <span style="color: #666; font-size: 15px; font-weight: 500;"><%= (!o.Table_Number || o.Order_type === 'กลับบ้าน') ? 'กลับบ้าน' : 'โต๊ะ ' + o.Table_Number %></span>
+                <span style="margin-left: auto; color: #888; font-size: 13px;"><%= o.Order_Time %> น.</span>
+              </div>
+              
+              <!-- ป้ายสถานะพร้อมเสิร์ฟ -->
+              <div>
+                <span style="display: inline-flex; align-items: center; gap: 6px; background: #8cd66d; color: #1a4f14; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 700;">
+                  ✓ พร้อมเสิร์ฟ
+                </span>
+              </div>
+            </a>
+          <% }) %>
+        </section>
+
+        <!-- ==========================================
+         * SECTION 4: SELECTED ORDER DETAILS & ACTIONS
+         * ========================================== -->
+        <!-- ฝั่งขวา: รายละเอียดออเดอร์ที่เลือกและปุ่มดำเนินการ -->
+        <% if (selected) { %>
+          <section class="panel-sticky" style="background: #fff; border: 1px solid #e8e8e8; border-radius: 20px; padding: 30px; box-shadow: 0 8px 30px rgba(0,0,0,0.05); position: sticky; top: 20px;">
+            
+            <!-- ส่วนหัวออเดอร์: เลขออเดอร์ หมายเลขโต๊ะ และป้ายสถานะ -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+              <div style="display: flex; align-items: center; gap: 16px;">
+                <span style="font-family: var(--font-head); font-size: 36px; font-weight: 900; color: #111; letter-spacing: 0.5px; line-height: 1;"><%= orderNo(selected.Reference_Code) %></span>
+                <span style="background: #f0f0f0; color: #555; padding: 6px 18px; border-radius: 20px; font-size: 15px; font-weight: 600;"><%= (!selected.Table_Number || selected.Order_type === 'กลับบ้าน') ? 'กลับบ้าน' : 'โต๊ะ ' + selected.Table_Number %></span>
+              </div>
+              <span style="display: inline-flex; align-items: center; gap: 6px; background: #8cd66d; color: #1a4f14; padding: 8px 20px; border-radius: 30px; font-size: 15px; font-weight: 700;">
+                ✓ พร้อมเสิร์ฟ
+              </span>
+            </div>
+
+            <!-- กล่องแสดงตัวอย่างรูปภาพและรายการอาหาร -->
+            <div style="border: 2px solid #e8e8e8; border-radius: 20px; padding: 24px; display: flex; gap: 24px; margin-bottom: 24px; background: #fafafa; align-items: flex-start;">
+              <div style="width: 140px; height: 140px; border: 3px solid #222; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 60px; background: #fff; flex-shrink: 0; overflow: hidden;">
+                <% if (selected.items && selected.items[0] && selected.items[0].Image_URL) { %>
+                  <img src="<%= selected.items[0].Image_URL %>" alt="Food Image" style="width: 100%; height: 100%; object-fit: cover;">
+                <% } else { %>
+                  🍲
+                <% } %>
+              </div>
+
+              <div style="flex: 1; overflow-y: auto; max-height: 250px; padding-right: 10px;">
+                <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 14px;">
+                  <% selected.items.forEach(function (it) { %>
+                    <li style="display: flex; justify-content: space-between; align-items: flex-start;">
+                      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <span style="font-weight: 600; color: #222; font-size: 16px;">• <%= it.Menu_Name %></span>
+                        <% if (it.Spiciness_Level) { %>
+                          <span style="color: #d9362b; font-size: 14px; font-weight: 700;">🌶️ <%= it.Spiciness_Level %></span>
+                        <% } %>
+                        <% if (it.Special_Note) { %>
+                          <span style="background: #e0e0e0; color: #555; padding: 2px 8px; border-radius: 6px; font-size: 13px; font-weight: 500;"><%= it.Special_Note %></span>
+                        <% } %>
+                      </div>
+                      <span style="font-weight: 800; color: #222; font-size: 18px; margin-left: 14px;">x<%= it.Quantity %></span>
+                    </li>
+                  <% }) %>
+                </ul>
+              </div>
+            </div>
+
+            <p style="text-align: center; color: #777; font-size: 14px; margin-bottom: 16px;">
+              ส่งแจ้งเตือนไปแล้ว <b style="color: #222; font-size: 16px;"><%= selected.notify %></b> ครั้ง
+            </p>
+
+            <!-- ปุ่มดำเนินการ: แจ้งเตือนซ้ำ / ยืนยันรับอาหารแล้ว -->
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+              <!-- ฟอร์มส่งแจ้งเตือนเรียกรับอาหาร -->
+              <form method="post" action="/counter/notify/<%= selected.Order_ID %>" style="margin: 0;">
+                <button type="submit" style="width: 100%; background: #d9362b; color: #fff; border: none; padding: 18px; border-radius: 999px; font-family: var(--font-head); font-size: 18px; font-weight: 700; cursor: pointer; box-shadow: 0 6px 16px rgba(217, 54, 43, 0.25); transition: background 0.2s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                  <span style="font-size: 22px;">🛎️</span> แจ้งเตือนพร้อมรับอาหาร
+                </button>
+              </form>
+              
+              <!-- ฟอร์มยืนยันลูกค้ารับอาหารเรียบร้อยแล้ว (เสร็จสิ้น) -->
+              <form method="post" action="/counter/complete/<%= selected.Order_ID %>" style="margin: 0;">
+                <button type="submit" style="width: 100%; background: #e4e4e4; color: #333; border: none; padding: 18px; border-radius: 999px; font-family: var(--font-head); font-size: 18px; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                  <span style="font-size: 20px;">✓</span> ยืนยันลูกค้ารับอาหารแล้ว
+                </button>
+              </form>
+            </div>
+          </section>
+        <% } else if (list.length > 0) { %>
+          <!-- ข้อความแนะนำเมื่อยังไม่ได้เลือกรายการฝั่งซ้าย -->
+          <div style="display: flex; align-items: center; justify-content: center; height: 100%; min-height: 400px; background: #fafafa; border: 2px dashed #d0d0d0; border-radius: 20px;">
+            <p style="color: #888; font-size: 18px; font-weight: 500;">👈 กรุณาเลือกออเดอร์ทางซ้ายเพื่อดูรายละเอียด</p>
+          </div>
+        <% } %>
+      </div>
+    <% } %>
+  </main>
+
+  <!-- ==========================================
+   * SECTION 5: BOTTOM NAVIGATION
+   * ========================================== -->
+  <%- include('../partials/counter-nav') %>
+</div>
+</body>
+</html>

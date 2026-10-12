@@ -1,0 +1,48 @@
+<!-- ==========================================================================
+ * FILE: views/staff/qr.ejs
+ * DESCRIPTION: หน้าแสดงและจัดการ QR Code ประจำโต๊ะอาหาร การแสดงรายการ QR Code ของทุกโต๊ะ และการแสดงเฉพาะโต๊ะเดี่ยวสำหรับพิมพ์
+ * ========================================================================== -->
+
+<!-- ==========================================
+ * SECTION 1: PARTIAL INCLUDES & HEAD SETUP
+ * ========================================== -->
+<%- include('../partials/head', { title: 'QR Code ประจำโต๊ะ' }) %>
+
+<body>
+<!-- คอนเทนเนอร์หลักสำหรับจัดวางเค้าโครงหน้า QR Code -->
+<main class="qr-page">
+
+  <!-- ==========================================
+   * SECTION 2: PAGE HEADER & NAVIGATION
+   * ========================================== -->
+  <!-- แถบหัวข้อหน้าจอพร้อมปุ่มย้อนกลับ -->
+  <div class="page-top" style="padding:0 0 12px">
+    <!-- ปุ่มย้อนกลับ (กลับไปหน้า /qr ถ้าเป็นโหมดโต๊ะเดี่ยว หรือกลับหน้าแรกถ้าเป็นโหมดรวมทุกโต๊ะ) -->
+    <a class="back" href="<%= single ? '/qr' : '/' %>" aria-label="ย้อนกลับ">←</a>
+    <!-- แสดงหัวข้อหน้าจอตามโหมดการใช้งาน (โต๊ะเดี่ยว / รวมทุกโต๊ะ) -->
+    <h2><%= single ? 'QR Code ' + tables[0].Table_Name : 'QR Code ประจำโต๊ะ' %></h2>
+  </div>
+
+  <!-- ==========================================
+   * SECTION 3: TABLE QR CODE DISPLAY GRID
+   * ========================================== -->
+  <!-- ส่วนแสดงรายการการ์ด QR Code (สลับ Layout ระหว่าง qr-single และ qr-grid) -->
+  <div class="<%= single ? 'qr-single' : 'qr-grid' %>">
+    <% tables.forEach(function (t) { %>
+    <!-- การ์ดแสดงข้อมูลและรูปภาพ QR Code ประจำโต๊ะ -->
+    <a class="qr-card" href="<%= single ? t.QR_Code_URL : '/qr/' + t.Table_ID + '?base=' + encodeURIComponent(baseURL) %>">
+      <div class="brand">🍲 หม่าล่า Self Service</div>
+      <!-- จัดการแสดงผลชื่อโต๊ะ หรือ กลับบ้าน -->
+      <div class="table-no"><%= t.Table_ID === 'takeaway' ? t.Table_Name : 'โต๊ะ ' + t.Table_Number %></div>
+      <!-- รูปภาพ QR Code ประจำโต๊ะที่สร้างจาก Data URL -->
+      <img src="<%= t.qrImage %>" alt="QR Code <%= t.Table_ID === 'takeaway' ? 'กลับบ้าน' : 'โต๊ะ ' + t.Table_Number %>">
+      <div class="hint">สแกนเพื่อสั่งอาหาร</div>
+      <!-- URL เต็มสำหรับการเข้าสู่ระบบสั่งอาหารของโต๊ะนี้ -->
+      <div class="url"><%= t.fullURL %></div>
+    </a>
+    <% }) %>
+  </div>
+
+</main>
+</body>
+</html>

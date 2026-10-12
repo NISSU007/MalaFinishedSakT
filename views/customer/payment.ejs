@@ -1,0 +1,143 @@
+<!-- ==========================================================================
+ * FILE: views/customer/payment.ejs
+ * DESCRIPTION: หน้าชำระเงินฝั่งลูกค้า รองรับการชำระเงินผ่าน Thai QR Code (PromptPay) และชำระเงินสดที่เคาน์เตอร์
+ *              พร้อมตัวนับเวลาถอยหลัง และระบบตรวจสอบการชำระเงินอัตโนมัติ
+ * ========================================================================== -->
+
+<!-- ==========================================
+ * SECTION 1: PARTIAL INCLUDES & HEAD SETUP
+ * ========================================== -->
+<%- include('../partials/head', { css: 'customer', title: 'ชำระเงิน' }) %>
+
+<body>
+<div class="phone payment-page">
+
+  <!-- แถบส่วนหัวแสดงโลโก้ร้านและหมายเลขโต๊ะ -->
+  <%- include('../partials/customer-header') %>
+
+  <div class="page-top"><h2>ชำระเงิน</h2></div>
+
+  <!-- ==========================================
+   * SECTION 2: TOTAL PRICE DISPLAY
+   * ========================================== -->
+  <!-- กล่องแสดงยอดเงินทั้งหมดที่ต้องชำระ -->
+  <div class="pay-total">
+    <span>ยอดที่ต้องชำระ</span>
+    <strong><%= baht(order.Total_Price) %> บาท</strong>
+  </div>
+
+  <!-- ==========================================
+   * SECTION 3: PAYMENT METHOD SELECTION
+   * ========================================== -->
+  <!-- ปุ่มตัวเลือกช่องทางการชำระเงิน (สแกน QR / ชำระเงินสด) -->
+  <div class="pay-options">
+    <a class="pay-opt <%= typeof method !== 'undefined' && method === 'qr' ? 'active' : '' %>" href="?method=qr">
+      <span class="ico">📱</span>สแกน QR<small>พร้อมเพย์ / ทุกธนาคาร</small>
+    </a>
+    <form method="post" action="/table/<%= table.Table_ID %>/payment/<%= order.Order_ID %>/cash" style="margin:0">
+      <button class="pay-opt <%= typeof method !== 'undefined' && method === 'cash' ? 'active' : '' %>" type="submit">
+        <span class="ico">💵</span>เงินสด<small>ชำระที่เคาน์เตอร์</small>
+      </button>
+    </form>
+  </div>
+
+  <!-- ==========================================
+   * SECTION 4: PAYMENT DETAILS (QR CODE & CASH)
+   * ========================================== -->
+  <% if (typeof method !== 'undefined' && method === 'qr' && qr) { %>
+
+    <!-- 4.1 กรณีเลือกชำระผ่าน QR Code พร้อมเพย์ -->
+    <section class="pay-panel">
+      <h3>สแกนเพื่อชำระเงิน</h3>
+      <div class="qr-frame">
+        <div class="qr-logo-row">
+          <span class="qr-brandline">🏮 <%= qr.merchantName %></span>
+          <span class="qr-thaiqr">Thai QR</span>
+        </div>
+        <img src="<%= qr.qrImage %>" alt="QR Code ชำระเงิน <%= baht(order.Total_Price) %> บาท">
+        <div class="qr-amount-label">จำนวนเงิน</div>
+        <div class="qr-amount"><%= baht(order.Total_Price) %> บาท</div>
+        <div class="qr-ref">รหัสอ้างอิง <%= order.Reference_Code %></div>
+        <% if (qr.provider === 'promptpay' && qr.promptpayId) { %>
+          <div class="qr-ppid">พร้อมเพย์ <%= qr.promptpayId %></div>
+        <% } %>
+      </div>
+
+      <% if (qr.autoConfirm) { %>
+        <!-- แสดงสถานะกำลังรอระบบตรวจสอบอัตโนมัติ -->
+        <div class="pay-waiting"><span class="pay-dot"></span> กำลังรอการชำระเงิน ระบบจะยืนยันให้อัตโนมัติ</div>
+      <% } else { %>
+        <!-- ปุ่มกดเพื่อยืนยันการโอนเงินสดกรณีแมนนวล -->
+        <p class="pay-hint">เปิดแอปธนาคารของคุณ แล้วสแกน QR ด้านบน<br>ยอดเงินและชื่อผู้รับจะแสดงให้อัตโนมัติ</p>
+        <form method="post" action="/table/<%= table.Table_ID %>/payment/<%= order.Order_ID %>/qr">
+          <button class="confirm-btn" type="submit">✓ ฉันโอนเงินเรียบร้อยแล้ว</button>
+        </form>
+      <% } %>
+    </section>
+
+  <% } else if (typeof method !== 'undefined' && method === 'cash') { %>
+
+    <!-- 4.2 กรณีเลือกชำระด้วยเงินสดที่เคาน์เตอร์ -->
+    <section class="pay-panel">
+      <h3>นำข้อมูลนี้ไปชำระที่เคาน์เตอร์</h3>
+      <table class="info-table">
+        <tr><td>หมายเลขโต๊ะ</td><td><%= table.Table_Number %></td></tr>
+        <tr><td>เลขอ้างอิงการชำระเงิน</td><td class="ref-big"><%= order.Reference_Code %></td></tr>
+        <tr><td>ยอดที่ต้องชำระ</td><td><%= baht(order.Total_Price) %> บาท</td></tr>
+      </table>
+      <p class="muted" style="margin:12px 0 0">แจ้งหมายเลขอ้างอิงกับพนักงานแคชเชียร์</p>
+    </section>
+  <% } %>
+
+  <!-- ==========================================
+   * SECTION 5: COUNTDOWN TIMER
+   * ========================================== -->
+  <!-- ส่วนแสดงตัวนับเวลาถอยหลังการชำระเงิน -->
+  <% if (!hasPayment) { %>
+    <p class="timer" id="timerBox">กรุณาชำระเงินภายใน <b id="timer">--:--</b> นาที</p>
+    <script>
+      let left = <%= typeof secondsLeft !== 'undefined' ? (secondsLeft || 0) : 0 %>;
+
+      function tick() {
+        if (left <= 0) {
+          document.getElementById('timer').textContent = '00:00';
+          alert('เซสชันการสั่งซื้อหมดอายุ');
+          location.reload();
+          return;
+        }
+        const m = String(Math.floor(left / 60)).padStart(2, '0');
+        const s = String(left % 60).padStart(2, '0');
+        document.getElementById('timer').textContent = m + ':' + s;
+        left--;
+        setTimeout(tick, 1000);
+      }
+      tick();
+    </script>
+  <% } %>
+
+  <!-- ==========================================
+   * SECTION 6: AUTOMATIC PAYMENT CHECK SCRIPT
+   * ========================================== -->
+  <!-- สคริปต์ตรวจสอบสถานะชำระเงินทุกๆ -->
+  <script>
+    (function () {
+      const orderId = "<%= order.Order_ID %>";
+      const tableId = "<%= table.Table_ID %>";
+
+      function check() {
+        fetch('/api/payment/' + orderId + '/status')
+          .then(r => r.json())
+          .then(d => {
+            if (d.ok && d.paid) {
+              window.location.href = '/table/' + tableId + '/order/' + orderId;
+            }
+          })
+          .catch(() => {});
+      }
+
+      setInterval(check, 2500);
+    })();
+  </script>
+</div>
+</body>
+</html>

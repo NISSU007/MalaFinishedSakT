@@ -1,0 +1,166 @@
+<!-- ==========================================================================
+ * FILE: views/partials/items_table.ejs
+ * DESCRIPTION: ตารางแสดงรายการอาหารในออเดอร์
+ *              แสดงรายละเอียดรูปภาพ, ตัวเลือกความเผ็ด, น้ำซุป, หมายเหตุ และราคารวม
+ * ========================================================================== -->
+
+<!-- ==========================================
+ * SECTION 1: COMPONENT STYLES
+ * ========================================== -->
+<style>
+  .items-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+    margin-bottom: 24px;
+    font-family: inherit;
+  }
+  .items-table th {
+    border-bottom: 1.5px solid #475569;
+    padding: 8px 0;
+    text-align: left;
+    font-weight: 600;
+    color: #475569;
+    font-size: 14px;
+  }
+  .items-table th.c { text-align: center; }
+  .items-table th.r { text-align: right; }
+  
+  .items-table td {
+    padding: 12px 0;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: top;
+    font-size: 14px;
+    color: #1e293b;
+  }
+  .items-table td.c { text-align: center; }
+  .items-table td.r { text-align: right; }
+  
+  .item-cell {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  
+  .item-thumb {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    background-color: #f8fafc;
+    overflow: hidden;
+    font-size: 18px;
+  }
+  .item-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  
+  .item-title {
+    font-weight: 500;
+    color: #0f172a;
+    line-height: 1.3;
+  }
+  
+  .item-spice, .item-sub {
+    font-size: 13px;
+    color: #d9362b;
+    line-height: 1.3;
+  }
+  
+  .items-table tfoot td {
+    border-top: 1.5px solid #f1f5f9;
+    border-bottom: none;
+    padding-top: 16px;
+    font-weight: 800;
+    font-size: 16px;
+    color: #0f172a;
+  }
+
+  .qty-col {
+    padding-right: 16px !important;
+  }
+</style>
+
+<!-- ==========================================
+ * SECTION 2: TABLE CONTAINER & HEADERS
+ * ========================================== -->
+<table class="items-table">
+  <thead>
+    <tr>
+      <th style="width: 50%;">เมนู</th>
+      <th class="r qty-col" style="width: 25%;">จำนวน</th>
+      <th class="r" style="width: 25%;">ราคารวม</th>
+    </tr>
+  </thead>
+
+  <!-- ==========================================
+   * SECTION 3: TABLE BODY & ITEM ITERATION
+   * ========================================== -->
+  <tbody>
+    <% if (typeof order !== 'undefined' && order && order.items && order.items.length > 0) { %>
+      <% order.items.forEach(function (it) { %>
+      <tr>
+        <td>
+          <div class="item-cell">
+            <!-- แสดงรูปภาพเมนู หรือ ไอคอนย่อประจำหมวดหมู่ -->
+            <div class="item-thumb">
+              <% if (it.Image_URL || it.Image) { %>
+                <img src="<%= it.Image_URL || it.Image %>" alt="<%= it.Menu_Name %>" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <span style="display:none;"><%= (typeof CATEGORY_ICON !== 'undefined' && CATEGORY_ICON[it.Category_Name]) ? CATEGORY_ICON[it.Category_Name] : '🍽️' %></span>
+              <% } else { %>
+                <span><%= (typeof CATEGORY_ICON !== 'undefined' && CATEGORY_ICON[it.Category_Name]) ? CATEGORY_ICON[it.Category_Name] : '🍲' %></span>
+              <% } %>
+            </div>
+
+            <!-- ข้อมูลชื่อเมนู ตัวเลือกความเผ็ด น้ำซุป และหมายเหตุเพิ่มเติม -->
+            <div class="item-info">
+              <div class="item-title"><%= it.Menu_Name %></div>
+              
+              <% if (it.Spiciness_Level) { %>
+                <div class="item-spice">🌶<%= it.Spiciness_Level %></div>
+              <% } %>
+
+              <% if (it.Soup_Type && (it.Menu_Name.includes('ผสม') || it.Menu_Name !== it.Soup_Type)) { %>
+                <div class="item-sub" style="color: #333;">น้ำซุป: <%= it.Soup_Type %></div>
+              <% } %>
+
+              <% if (it.Special_Note) { %>
+                <div class="item-sub" style="color: #333;">หมายเหตุ: <%= it.Special_Note %></div>
+              <% } %>
+            </div>
+          </div>
+        </td>
+        <!-- จำนวนและราคารวมย่อย -->
+        <td class="r item-qty qty-col"><%= it.Quantity %> ชุด</td>
+        <td class="r item-price"><%= typeof baht === 'function' ? baht(it.Subtotal) : it.Subtotal %> บาท</td>
+      </tr>
+      <% }) %>
+    <% } else { %>
+      <!-- แสดงผลเมื่อไม่มีรายการอาหารในคำสั่งซื้อ -->
+      <tr>
+        <td colspan="3" class="c muted" style="padding: 24px 0;">ไม่มีรายการอาหาร</td>
+      </tr>
+    <% } %>
+  </tbody>
+
+  <!-- ==========================================
+   * SECTION 4: TABLE FOOTER (GRAND TOTAL)
+   * ========================================== -->
+  <tfoot>
+    <tr>
+      <td colspan="2" class="total-label">ยอดรวม</td>
+      <td class="r total-value"><%= typeof order !== 'undefined' && order ? (typeof baht === 'function' ? baht(order.Total_Price) : order.Total_Price) : '0.00' %> บาท</td>
+    </tr>
+  </tfoot>
+</table>

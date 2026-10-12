@@ -1,0 +1,122 @@
+<!-- ==========================================================================
+ * FILE: views/customer/cart.ejs
+ * DESCRIPTION: หน้าตะกร้าสินค้าสำหรับลูกค้า จัดการปรับเพิ่ม-ลดจำนวนรายการ, แก้ไขความเผ็ด/ซุป, ลบรายการ 
+ *              ตรวจสอบเงื่อนไขเลือกน้ำซุป และยืนยันคำสั่งซื้อ
+ * ========================================================================== -->
+
+<!-- ==========================================
+ * SECTION 1: PARTIAL INCLUDES & HEAD SETUP
+ * ========================================== -->
+<%- include('../partials/head', { css: 'customer', title: 'ตะกร้าสินค้า' }) %>
+
+<body>
+<div class="phone cart-page">
+
+  <!-- ==========================================
+   * SECTION 2: HEADER & NAVIGATION
+   * ========================================== -->
+  <!-- แถบส่วนหัวแสดงโลโก้ร้าน หมายเลขโต๊ะ และปุ่มย้อนกลับ -->
+  <%- include('../partials/customer-header') %>
+
+  <div class="page-top">
+    <a class="back" href="/table/<%= table.Table_ID %>/menu" aria-label="กลับไปหน้าเมนู">←</a>
+    <h2>ตะกร้าสินค้า</h2>
+  </div>
+
+  <!-- ==========================================
+   * SECTION 3: ERROR ALERTS & MESSAGES
+   * ========================================== -->
+  <!-- กล่องแสดงข้อความแจ้งเตือนข้อผิดพลาด (ตะกร้าว่าง / เซสชันหมดอายุ / ยังไม่ได้เลือกน้ำซุป) -->
+  <div style="padding:0 16px">
+    <% if (error === 'empty') { %>
+      <div class="alert alert-red" role="alert">ตะกร้าว่างเปล่า กรุณาเลือกอาหารก่อนยืนยันคำสั่งซื้อ</div>
+    <% } else if (error === 'expired') { %>
+      <div class="alert alert-red" role="alert">เซสชันการสั่งซื้อหมดอายุ รหัสอ้างอิงถูกยกเลิกแล้ว กรุณายืนยันคำสั่งซื้ออีกครั้ง</div>
+    <% } else if (error === 'nosoup' || (typeof missingSoup !== 'undefined' && missingSoup)) { %>
+      <div class="alert alert-red" role="alert">คุณได้เลือกรายการวัตถุดิบ กรุณาเลือก "น้ำซุป" อย่างน้อย 1 รายการก่อนยืนยันคำสั่งซื้อ</div>
+    <% } %>
+  </div>
+
+  <!-- ==========================================
+   * SECTION 4: CART ITEMS LIST & EMPTY STATE
+   * ========================================== -->
+  <% if (items.length === 0) { %>
+    <!-- กรณีไม่มีสินค้าในตะกร้า -->
+    <div class="empty-state">
+      <div class="big">🛒</div>
+      <p>ยังไม่มีรายการในตะกร้า</p>
+      <a class="btn btn-red" href="/table/<%= table.Table_ID %>/menu">เลือกเมนูอาหาร</a>
+    </div>
+
+  <% } else { %>
+    <!-- รายการสินค้าในตะกร้า -->
+    <div class="cart-list">
+      <% items.forEach(function (it) { %>
+        <div class="cart-item">
+
+          <!-- รูปภาพเมนู หรือไอคอนหมวดหมู่ -->
+          <div class="row-img">
+            <% if (it.Image_URL) { %>
+              <img src="<%= it.Image_URL %>" alt="<%= it.Menu_Name %>">
+            <% } else { %>
+              <%= CATEGORY_ICON[it.Category_Name] || '🍽️' %>
+            <% } %>
+          </div>
+
+          <!-- รายละเอียดเมนู: ชื่อ / น้ำซุป / ความเผ็ด / หมายเหตุ / ปุ่มแก้ไข -->
+          <div class="row-info">
+            <h4><%= it.Menu_Name %></h4>
+
+            <!-- แสดงประเภทน้ำซุปกรณีซุปผสม 2 ประเภท -->
+            <% if (it.Soup_Type && (it.Menu_Name.includes('2') || it.Soup_Type.includes('+'))) { %>
+              <small class="muted" style="display:block; color:#555; margin-top:2px;">น้ำซุป: <%= it.Soup_Type %></small>
+            <% } %>
+
+            <% if (it.Spiciness_Level) { %><small class="link-red">🌶 <%= it.Spiciness_Level %></small><% } %>
+            <% if (it.Special_Note) { %><small class="muted">หมายเหตุ: <%= it.Special_Note %></small><% } %>
+
+            <!-- ปุ่มเปิดหน้าแก้ไขตัวเลือกของรายการนี้ -->
+            <a class="link-btn" href="/table/<%= table.Table_ID %>/item/<%= it.Menu_ID %>?edit=<%= it.Order_Detail_ID %>">แก้ไข</a>
+          </div>
+
+          <!-- แสดงราคารวมย่อย และปุ่มปรับจำนวน/ลบรายการ -->
+          <div class="cart-right">
+            <span class="row-price"><%= baht(it.Subtotal) %> บาท</span>
+
+            <!-- ปุ่มเพิ่ม/ลดจำนวน (ซ่อนสำหรับเมนูน้ำซุป) -->
+            <% if (!it.Soup_Type) { %>
+              <div class="mini-qty">
+                <form method="post" action="/table/<%= table.Table_ID %>/cart/update/<%= it.Order_Detail_ID %>">
+                  <button name="action" value="minus" aria-label="ลดจำนวน">−</button>
+                </form>
+                <span><%= it.Quantity %></span>
+                <form method="post" action="/table/<%= table.Table_ID %>/cart/update/<%= it.Order_Detail_ID %>">
+                  <button name="action" value="plus" aria-label="เพิ่มจำนวน">+</button>
+                </form>
+              </div>
+            <% } %>
+
+            <!-- ปุ่มลบรายการออกจากตะกร้า -->
+            <form method="post" action="/table/<%= table.Table_ID %>/cart/delete/<%= it.Order_Detail_ID %>">
+              <button class="link-btn link-red" type="submit">ลบ</button>
+            </form>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <!-- ==========================================
+   * SECTION 5: TOTAL PRICE & CONFIRM ORDER FORM
+   * ========================================== -->
+  <!-- ยอดรวมทั้งหมด -->
+  <div class="total-row"><span>ยอดรวมทั้งหมด</span><strong><%= baht(total) %> บาท</strong></div>
+
+  <!-- ปุ่มยืนยันคำสั่งซื้อลอยด้านล่าง (ปิดใช้งานเมื่อตะกร้าว่างหรือขาดน้ำซุป) -->
+  <% const isBtnDisabled = items.length === 0 || (typeof missingSoup !== 'undefined' && missingSoup); %>
+  <form class="bottom-bar" method="post" action="/table/<%= table.Table_ID %>/cart/confirm">
+    <button class="bar-btn" type="submit" <%= isBtnDisabled ? 'disabled' : '' %> style="justify-content:center">ยืนยันคำสั่งซื้อ</button>
+  </form>
+</div>
+</body>
+</html>

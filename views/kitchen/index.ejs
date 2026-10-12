@@ -1,0 +1,199 @@
+<!-- ==========================================================================
+ * FILE: views/kitchen/index.ejs
+ * DESCRIPTION: หน้าหลักระบบพนักงานครัวสำหรับจัดการรายการออเดอร์ที่ต้องปรุง
+ *              รองรับการกรองสถานะ, ค้นหา, ดูรายละเอียดออเดอร์ และอัปเดตข้อมูลเรียลไทม์
+ * ========================================================================== -->
+
+<!-- ==========================================
+ * SECTION 1: PARTIAL INCLUDES & HEAD SETUP
+ * ========================================== -->
+<%- include('../partials/head', {css: 'kitchen', title: 'ออเดอร์ที่ต้องปรุง', refresh: 0 }) %>
+
+<body>
+<div class="staff">
+  <!-- แถบส่วนหัวระบบสำหรับพนักงานครัว -->
+  <%- include('../partials/staff-top', { roleLabel: 'ครัว' }) %>
+
+  <main class="s-main">
+    <!-- ==========================================
+     * SECTION 2: PAGE TITLE & STATUS ALERT
+     * ========================================== -->
+    <h1 class="s-title">ออเดอร์ที่ต้องปรุง</h1>
+
+    <!-- กล่องแจ้งเตือนเมื่อปรุงอาหารเสร็จสิ้นสำเร็จ -->
+    <% if (success) { %>
+      <div class="alert alert-green" role="status">✔ ออเดอร์ #<%= success %> ปรุงเสร็จสิ้น ส่งไปหน้าเคาน์เตอร์แล้ว</div>
+    <% } %>
+
+    <!-- ==========================================
+     * SECTION 3: TOOLBAR (TABS & SEARCH FORM)
+     * ========================================== -->
+    <div class="kitchen-toolbar">
+      <!-- แท็บกรองสถานะการปรุงอาหาร (กำลังเตรียม / ปรุงเสร็จสิ้น / เสร็จสิ้นวันนี้) -->
+      <div class="kitchen-tabs">
+        <a href="?tab=preparing&q=<%= q %>" class="kitchen-tab preparing-tab <%= tab === 'preparing' ? 'active' : '' %>">
+          📋 กำลังเตรียม <b><%= counts.preparing %></b> <span>ออเดอร์</span>
+        </a>
+        <a href="?tab=cooked&q=<%= q %>" class="kitchen-tab cooked-tab <%= tab === 'cooked' ? 'active' : '' %>">
+          🍲 ปรุงเสร็จสิ้น <b><%= counts.cooked %></b> <span>ออเดอร์</span>
+        </a>
+        <a href="?tab=done&q=<%= q %>" class="kitchen-tab done-tab <%= tab === 'done' ? 'active' : '' %>">
+          ✅ เสร็จสิ้นวันนี้ <b><%= counts.done %></b> <span>ออเดอร์</span>
+        </a>
+      </div>
+
+      <!-- ช่องค้นหาหมายเลขออเดอร์ -->
+      <form class="kitchen-search" method="get">
+        <input type="hidden" name="tab" value="<%= tab %>">
+        <input type="search" name="q" value="<%= q %>" placeholder="🔍 ค้นหาเลขออเดอร์" aria-label="ค้นหาเลขออเดอร์">
+      </form>
+    </div>
+
+    <!-- ==========================================
+     * SECTION 4: ORDER LIST & EMPTY STATE
+     * ========================================== -->
+    <% if (list.length === 0) { %>
+      <!-- กรณีไม่มีรายการออเดอร์ในระบบ -->
+      <div class="empty-order" style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; min-height: 350px; background: #ffffff; border: 2px dashed #d0d0d0; border-radius: 20px; margin-top: 20px; text-align: center; padding: 40px 20px; box-sizing: border-box;">
+        <div class="empty-icon" style="font-size: 50px; margin-bottom: 12px; opacity: 0.6;">🍽️</div>
+        <p style="font-size: 16px; font-weight: 500; color: #888; margin: 0;">ไม่มีออเดอร์ในขณะนี้</p>
+      </div>
+    <% } else { %>
+      <!-- เลย์เอาต์แสดงการ์ดรายการออเดอร์และพาเนลรายละเอียดด้านข้าง -->
+      <div class="s-layout <%= selected ? 'has-side' : '' %>">
+
+        <!-- ตารางการ์ดออเดอร์ (Order Cards Grid) -->
+        <section class="order-grid">
+          <% list.forEach(function (o) { %>
+            <a class="o-card <%= selected && selected.Order_ID === o.Order_ID ? 'selected' : '' %>" href="?tab=<%= tab %>&q=<%= q %>&id=<%= o.Order_ID %>">
+              <div class="o-card-head">
+                <span class="o-no"><%= orderNo(o.Reference_Code) %></span>
+                <span class="muted"><%= o.Order_Time %> น.</span>
+              </div>
+              <div class="o-meta">
+                <!-- จัดการแสดงผลชื่อโต๊ะ หรือ กลับบ้าน บนการ์ดออเดอร์ -->
+                <span><%= o.Table_Number ? 'โต๊ะ ' + o.Table_Number : 'กลับบ้าน' %></span>
+                <span><%= o.Item_Count %> รายการ</span>
+              </div>
+              
+              <% if (tab === 'all') { %>
+                <span class="badge <%= o.Order_Status === STATUS.PREPARING ? 'badge-amber' : 'badge-green' %>"><%= o.Order_Status %></span>
+              <% } %>
+              
+              <!-- รายการอาหารอย่างย่อบนการ์ด -->
+              <ul class="o-items">
+                <% o.items.forEach(function (it) { %>
+                  <li>
+                    <span>• <%= it.Menu_Name %> <% if (it.Spiciness_Level) { %><span class="spice">🌶 <%= it.Spiciness_Level %></span><% } %></span>
+                    <span>x<%= it.Quantity %></span>
+                  </li>
+                <% }) %>
+              </ul>
+
+              <!-- แสดงหมายเหตุเพิ่มเติมของการ์ด -->
+              <% var notes = o.items.filter(function (it) { return it.Special_Note; }); %>
+              <span class="o-note">หมายเหตุ : <%= notes.length ? notes.map(function (n) { return n.Menu_Name + ' - ' + n.Special_Note; }).join(', ') : 'ไม่มี' %></span>
+            </a>
+          <% }) %>
+        </section>
+
+        <!-- ==========================================
+         * SECTION 5: SELECTED ORDER DETAIL PANEL
+         * ========================================== -->
+        <!-- พาเนลแสดงรายละเอียดออเดอร์ที่ถูกเลือก -->
+        <% if (selected) { %>
+          <aside class="panel">
+            <div class="detail-head" style="display:flex; flex-direction:column; gap:4px">
+              <div style="display:flex; justify-content:space-between; align-items:center; width:100%">
+                <!-- จัดการแสดงผลชื่อโต๊ะ หรือ กลับบ้าน บนพาเนลรายละเอียด -->
+                <div class="muted">รายละเอียดออเดอร์ · <%= selected.Table_Number ? 'โต๊ะ ' + selected.Table_Number : 'กลับบ้าน' %></div>
+                <a class="close-x" href="?tab=<%= tab %>" aria-label="ปิด">✕</a>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
+                <div>
+                  <span class="o-no"><%= orderNo(selected.Reference_Code) %></span>
+                  <!-- เพิ่มป้ายบอกว่าเป็นออเดอร์สั่งกลับบ้าน -->
+                  <% if (selected.Order_type === 'กลับบ้าน') { %>
+                    <span class="badge badge-amber" style="margin-left: 8px;">🥡 กลับบ้าน</span>
+                  <% } %>
+                </div>
+                <div class="muted" style="text-align: right; font-size: 0.9em; line-height: 1.3; margin-left: auto;">
+                  <div>🕒 <%= selected.Order_Time %> น.</div>
+                  <div><%= selected.Order_Date %></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- รวมตารางรายการอาหาร -->
+            <%- include('../partials/items-table', { order: selected }) %>
+
+            <!-- ปุ่มดำเนินการ (อัปเดตสถานะ / พิมพ์ใบเสร็จแนบจาน) -->
+            <div style="display:flex; flex-direction:column; gap:8px; margin-top:14px; width:100%;">
+              <% if (selected.Order_Status === 'กำลังเตรียมอาหาร') { %>
+                <a class="btn btn-amber" style="width:100%; text-align:center; box-sizing:border-box;" href="/kitchen/status?id=<%= selected.Order_ID %>">อัปเดตสถานะ</a>
+              <% } %>
+              <a class="btn btn-red" style="width:100%; text-align:center; box-sizing:border-box;" href="/kitchen/print/<%= selected.Order_ID %>" target="_blank">🖨️ พิมพ์ใบเสร็จ</a>
+            </div>
+          </aside>
+        <% } %>
+
+      </div>
+    <% } %>
+  </main>
+</div>
+
+<!-- ==========================================
+ * SECTION 6: REAL-TIME POLLING SCRIPT
+ * ========================================== -->
+<!-- สคริปต์อัปเดตรายการออเดอร์อัตโนมัติ โดยไม่เสียตำแหน่ง Scroll -->
+<script>
+  (function() {
+    setInterval(function() {
+      fetch(window.location.href)
+        .then(res => res.text())
+        .then(html => {
+          const doc = new DOMParser().parseFromString(html, 'text/html');
+
+          // 1. อัปเดตตัวเลขจำนวนออเดอร์ในแท็บด้านบน
+          const currentTabs = document.querySelector('.kitchen-tabs');
+          const newTabs = doc.querySelector('.kitchen-tabs');
+          if (currentTabs && newTabs) {
+            currentTabs.innerHTML = newTabs.innerHTML;
+          }
+
+          // 2. ตรวจสอบการเปลี่ยนแปลงของโครงสร้างหลัก (จากไม่มีออเดอร์ -> มีออเดอร์ หรือตรงข้ามกัน)
+          const currentEmpty = document.querySelector('.empty-order');
+          const newEmpty = doc.querySelector('.empty-order');
+          const currentGrid = document.querySelector('.order-grid');
+          const newGrid = doc.querySelector('.order-grid');
+
+          if ((currentEmpty && newGrid) || (currentGrid && newEmpty)) {
+            window.location.reload();
+            return;
+          }
+
+          // 3. อัปเดตรายการการ์ดออเดอร์แบบเรียลไทม์ โดยรักษาตำแหน่ง Scroll
+          if (currentGrid && newGrid) {
+            const currentSelected = currentGrid.querySelector('.o-card.selected');
+            if (currentSelected) {
+              const selectedHref = currentSelected.getAttribute('href');
+              const isStillExist = newGrid.querySelector(`.o-card[href="${selectedHref}"]`);
+              if (!isStillExist) {
+                window.location.reload();
+                return;
+              }
+            }
+
+            const scrollTop = currentGrid.scrollTop;
+            currentGrid.innerHTML = newGrid.innerHTML;
+            currentGrid.scrollTop = scrollTop;
+          }
+        })
+        .catch(err => console.error('Real-time update error:', err));
+    }, 1000);
+  })();
+</script>
+
+</body>
+</html>

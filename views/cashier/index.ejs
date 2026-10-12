@@ -1,0 +1,262 @@
+<!-- ==========================================================================
+ * FILE: views/cashier/index.ejs
+ * DESCRIPTION: หน้าหลักระบบแคชเชียร์สำหรับรับชำระเงินสดที่เคาน์เตอร์
+ *              ประกอบด้วย Grid 3 คอลัมน์ (รายการออเดอร์, รายละเอียดออเดอร์, การรับเงิน/คำนวณเงินทอน)
+ *              และระบบอัปเดตข้อมูลเรียลไทม์
+ * ========================================================================== -->
+
+<!-- ==========================================
+ * SECTION 1: PARTIAL INCLUDES & HEAD SETUP
+ * ========================================== -->
+<%- include('../partials/head', {css: 'cashier', title: 'คิดเงินสด', refresh: 0 }) %>
+
+<body>
+<div class="staff">
+  <!-- แถบส่วนหัวระบบสำหรับพนักงานแคชเชียร์ -->
+  <%- include('../partials/staff-top', { roleLabel: 'พนักงาน แคชเชียร์' }) %>
+
+  <main class="s-main">
+    <!-- ==========================================
+     * SECTION 2: PAGE TITLE & ALERT MESSAGES
+     * ========================================== -->
+    <h1 class="s-title" style="margin-bottom: 16px;">
+      คิดเงินสด <small class="muted" style="font-size:16px; font-weight:400;">รับชำระเงินสด</small>
+    </h1>
+
+    <!-- กล่องแจ้งเตือนเมื่อบันทึกการรับชำระเงินสำเร็จ -->
+    <% if (success) { %>
+      <div class="alert alert-green" role="status" style="margin-bottom: 16px;">
+        ✔ บันทึกการรับเงินเรียบร้อย ส่งออเดอร์เข้าครัวแล้ว
+      </div>
+    <% } %>
+
+    <!-- ==========================================
+     * SECTION 3: CASHIER MAIN GRID (3 COLUMNS)
+     * ========================================== -->
+    <div class="cashier-grid">
+
+      <!-- ------------------------------------------
+       * COLUMN 1: ORDER LIST & FILTERS
+       * ------------------------------------------ -->
+      <section class="panel">
+        <h3>รายการออเดอร์ (รอชำระเงิน)</h3>
+        
+        <!-- แท็บตัวกรองสถานะการชำระเงิน (ทั้งหมด / รอชำระเงิน / ชำระแล้ว) -->
+        <div class="s-tabs">
+          <a href="?tab=all&q=<%= q %>" class="<%= tab === 'all' ? 'active' : '' %>">ทั้งหมด (<%= counts.all %>)</a>
+          <a href="?tab=pending&q=<%= q %>" class="<%= tab === 'pending' ? 'active' : '' %>">รอชำระเงิน (<%= counts.pending %>)</a>
+          <a href="?tab=paid&q=<%= q %>" class="<%= tab === 'paid' ? 'active' : '' %>">ชำระแล้ว (<%= counts.paid %>)</a>
+        </div>
+
+        <!-- ฟอร์มค้นหาด้วยเลขอ้างอิงออเดอร์ หรือหมายเลขโต๊ะ -->
+        <form class="search" method="get">
+          <input type="hidden" name="tab" value="<%= tab %>">
+          <div class="search-input-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="search" name="q" value="<%= q %>" placeholder="ค้นหาเลขอ้างอิง, เลขโต๊ะ" aria-label="ค้นหา">
+          </div>
+        </form>
+
+        <!-- รายการการ์ดออเดอร์ -->
+        <div class="o-list">
+          <% if (list.length === 0) { %>
+            <p class="muted" style="text-align: center; padding: 20px 0;">ไม่มีรายการออเดอร์</p>
+          <% } %>
+          <% list.forEach(function (o) { %>
+            <a class="o-row <%= selected && selected.Order_ID === o.Order_ID ? 'selected' : '' %>" href="?tab=<%= tab %>&q=<%= q %>&id=<%= o.Order_ID %>">
+              <div class="o-row-top">
+                <span class="o-no"><%= orderNo(o.Reference_Code) %></span>
+                <span class="badge <%= o.Payment_Status === 'ชำระแล้ว' ? 'badge-green' : 'badge-red' %>">
+                  <%= o.Payment_Status === 'ชำระแล้ว' ? 'ชำระแล้ว' : 'รอชำระเงิน' %>
+                </span>
+              </div>
+              <div class="o-row-mid">
+                <span><%= o.Item_Count %> รายการ</span>
+              </div>
+              <div class="o-row-bottom">
+                <span><%= o.Order_Time %> น. · <%= o.Payment_Method === 'เงินสด' ? 'ชำระที่เคาน์เตอร์' : 'ชำระผ่าน QR Code' %></span>
+                <b><%= baht(o.Total_Price) %> บาท</b>
+              </div>
+            </a>
+          <% }) %>
+        </div>
+      </section>
+
+      <!-- ------------------------------------------
+       * COLUMN 2: SELECTED ORDER DETAILS
+       * ------------------------------------------ -->
+      <section class="panel">
+        <% if (!selected) { %>
+          <h3>รายละเอียดออเดอร์</h3>
+          <p class="muted" style="text-align: center; padding: 40px 0;">เลือกออเดอร์จากรายการด้านซ้ายเพื่อดูรายละเอียด</p>
+        <% } else { %>
+          <!-- ส่วนหัวรายละเอียดออเดอร์ -->
+          <div class="detail-head-wrap">
+            <div>
+              <h3 style="margin-bottom: 4px;">
+                รายละเอียดออเดอร์ 
+                <!-- แก้ไขการแสดงผล ป้องกันปัญหา "โต๊ะ null" -->
+                <span style="font-size: 14px; font-weight: 400; color: #666;">
+                  (<%= selected.Table_Number ? 'โต๊ะ ' + selected.Table_Number : 'กลับบ้าน' %>)
+                </span>
+              </h3>
+              <div class="detail-ref-title">
+                <%= orderNo(selected.Reference_Code) %>
+                <span class="badge <%= selected.Payment_Status === 'ชำระแล้ว' ? 'badge-green' : 'badge-red' %>">
+                  <%= selected.Payment_Status === 'ชำระแล้ว' ? 'ชำระแล้ว' : 'รอชำระเงิน' %>
+                </span>
+              </div>
+            </div>
+            <div class="detail-meta-text">
+              <div>🕒 <%= selected.Order_Time %> น.</div>
+              <div>📅 <%= selected.Order_Date %></div>
+            </div>
+          </div>
+
+          <div class="section-subhead">รายการอาหาร</div>
+          
+          <!-- ตารางแสดงรายการอาหารในออเดอร์ -->
+          <%- include('../partials/items-table', { order: selected }) %>
+
+          <!-- กล่องแสดงหมายเหตุจากลูกค้า -->
+          <div class="note-box">
+            <label>หมายเหตุ</label>
+            <p><%= selected.Special_Note && selected.Special_Note.trim() !== '' ? selected.Special_Note : 'ไม่มีหมายเหตุ' %></p>
+          </div>
+        <% } %>
+      </section>
+
+      <!-- ------------------------------------------
+       * COLUMN 3: CASH PAYMENT & CHANGE CALCULATION
+       * ------------------------------------------ -->
+      <section class="panel">
+        <h3>ชำระเงินสด</h3>
+        <% if (!selected) { %>
+          <p class="muted" style="text-align: center; padding: 40px 0;">ยังไม่ได้เลือกออเดอร์</p>
+        <% } else if (selected.Payment_Status === 'ชำระแล้ว') { %>
+          <!-- กรณีออเดอร์นี้ชำระเงินเรียบร้อยแล้ว -->
+          <div class="cash-total-card">
+            <div class="cash-total-icon">✅</div>
+            <div class="cash-total-info">
+              <span class="cash-total-label">ชำระเรียบร้อย (<%= selected.Payment_Method %>)</span>
+              <span class="cash-total-amt"><%= baht(selected.Total_Price) %> บาท</span>
+            </div>
+          </div>
+          <table class="info-table" style="width: 100%; margin-top: 12px;">
+            <tr><td>รับเงิน</td><td style="text-align:right;"><b><%= baht(selected.Payment_Amount) %> บาท</b></td></tr>
+            <tr><td>เงินทอน</td><td style="text-align:right;"><b><%= baht(selected.Change_Amount) %> บาท</b></td></tr>
+            <tr><td>เลขอ้างอิง</td><td style="text-align:right; font-size: 13px;"><%= selected.Transaction_Ref %></td></tr>
+          </table>
+        <% } else { %>
+          <!-- กรณีรอชำระเงินสด -->
+          <div class="cash-total-card">
+            <div class="cash-total-icon">💵</div>
+            <div class="cash-total-info">
+              <span class="cash-total-label">ยอดรวมทั้งหมด</span>
+              <span class="cash-total-amt"><%= baht(selected.Total_Price) %> บาท</span>
+            </div>
+          </div>
+
+          <% if (error === 'notenough') { %>
+            <div class="alert alert-red" role="alert" style="margin-bottom: 12px;">
+              จำนวนเงินที่รับไม่พอกับยอดชำระ
+            </div>
+          <% } %>
+
+          <!-- ฟอร์มรับเงินสดและคำนวณเงินทอน -->
+          <form method="post" action="/cashier/pay/<%= selected.Order_ID %>">
+            <label class="field-label" for="received" style="font-weight: 700; margin-bottom: 6px; display: block;">รับเงินจากลูกค้า</label>
+            <div class="input-with-unit">
+              <input class="cash-input" type="number" step="0.01" min="0" id="received" name="received" placeholder="กรอกจำนวนเงินที่รับ" required oninput="calcChange()">
+              <span class="unit-tag">บาท</span>
+            </div>
+
+            <!-- ปุ่มเลือกจำนวนเงินด่วน -->
+            <div class="quick-grid">
+              <% [100, 200, 300, 500, 700, 1000].forEach(function (v) { %>
+                <button type="button" onclick="setAmount(<%= v %>)"><%= v.toLocaleString() %></button>
+              <% }) %>
+            </div>
+
+            <!-- กล่องแสดงผลคำนวณเงินทอน -->
+            <div class="change-box" id="changeBox">
+              <span class="change-title"><span>🔄</span> เงินทอน</span>
+              <b id="changeText">0.00 บาท</b>
+            </div>
+
+            <!-- ปุ่มยืนยันการรับเงิน -->
+            <button class="btn-green-submit" type="submit" id="payBtn" disabled>
+              <span>✔</span> ยืนยันการรับเงิน
+            </button>
+          </form>
+
+          <!-- สคริปต์คำนวณเงินทอนและเปิด/ปิดปุ่มยืนยันอัตโนมัติ -->
+          <script>
+            const total = <%= selected.Total_Price %>;
+            function setAmount(v) {
+              document.getElementById('received').value = v;
+              calcChange();
+            }
+            function calcChange() {
+              const received = parseFloat(document.getElementById('received').value) || 0;
+              const change = received - total;
+              const box = document.getElementById('changeBox');
+              const text = document.getElementById('changeText');
+              if (change < 0) {
+                box.classList.add('bad');
+                text.textContent = 'ขาดอีก ' + Math.abs(change).toFixed(2) + ' บาท';
+                document.getElementById('payBtn').disabled = true;
+              } else {
+                box.classList.remove('bad');
+                text.textContent = change.toFixed(2) + ' บาท';
+                document.getElementById('payBtn').disabled = false;
+              }
+            }
+          </script>
+        <% } %>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<!-- ==========================================
+ * SECTION 4: REAL-TIME POLLING SCRIPT
+ * ========================================== -->
+<!-- สคริปต์อัปเดตสถานะออเดอร์และรายการแบบเรียลไทม์ -->
+<script>
+  (function() {
+    setInterval(function() {
+      fetch(window.location.href)
+        .then(res => res.text())
+        .then(html => {
+          const doc = new DOMParser().parseFromString(html, 'text/html');
+          
+          // 1. ตรวจสอบสถานะการชำระเงินของออเดอร์ที่เปิดดูอยู่ (เช่น ลูกค้าเปลี่ยนไปสแกน QR จ่ายสำเร็จ)
+          const currentBadge = document.querySelector('.detail-ref-title .badge');
+          const newBadge = doc.querySelector('.detail-ref-title .badge');
+          if (currentBadge && newBadge && currentBadge.textContent.trim() !== newBadge.textContent.trim()) {
+            window.location.reload();
+            return;
+          }
+
+          // 2. อัปเดตตัวเลขจำนวนออเดอร์ในแท็บด้านซ้าย
+          const newTabs = doc.querySelector('.s-tabs');
+          if (newTabs) document.querySelector('.s-tabs').innerHTML = newTabs.innerHTML;
+          
+          // 3. อัปเดตรายการการ์ดออเดอร์ พร้อมรักษาตำแหน่งการ Scroll
+          const currentList = document.querySelector('.o-list');
+          const newList = doc.querySelector('.o-list');
+          if (currentList && newList) {
+            const scrollTop = currentList.scrollTop;
+            currentList.innerHTML = newList.innerHTML;
+            currentList.scrollTop = scrollTop;
+          }
+        })
+        .catch(err => console.error('Real-time update error:', err));
+    }, 1000);
+  })();
+</script>
+
+</body>
+</html>

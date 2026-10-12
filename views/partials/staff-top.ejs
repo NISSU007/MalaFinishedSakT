@@ -1,0 +1,22 @@
+<!-- ==========================================================================
+ * FILE: views/partials/staff_header.ejs
+ * DESCRIPTION: แถบส่วนหัวระบบสำหรับพนักงาน (แสดงชื่อระบบ บทบาท และชื่อพนักงาน)
+ * ========================================================================== -->
+
+<!-- แถบหัวหน้าพนักงาน -->
+<header class="s-top">
+  <!-- ==========================================
+   * SECTION 1: BRAND LOGO & ROLE TITLE
+   * ========================================== -->
+  <a class="s-brand" href="/">
+    🍲 ระบบร้านหม่าล่า Self-Service <small>(<%= roleLabel %>)</small>
+  </a>
+
+  <!-- ==========================================
+   * SECTION 2: USER AVATAR & EMPLOYEE INFO
+   * ========================================== -->
+  <div class="s-user">
+    <span class="avatar">👤</span>
+    <span><%= employee ? employee.Employee_Name : roleLabel %></span>
+  </div>
+</header>

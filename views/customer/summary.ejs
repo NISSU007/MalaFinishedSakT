@@ -1,0 +1,74 @@
+<!-- ==========================================================================
+ * FILE: views/customer/summary.ejs
+ * DESCRIPTION: หน้าสรุปรายการสั่งซื้อก่อนดำเนินการชำระเงิน
+ *              แสดงรายการอาหาร ปริมาณ ราคาย่อย ยอดรวมทั้งหมด
+ * ========================================================================== -->
+
+<!-- ==========================================
+ * SECTION 1: PARTIAL INCLUDES & HEAD SETUP
+ * ========================================== -->
+<%- include('../partials/head', { css: 'customer', title: 'สรุปรายการสั่งซื้อ' }) %>
+
+<body>
+<div class="phone cart-page summary-page">
+
+  <!-- ==========================================
+   * SECTION 2: PAGE HEADER & NAVIGATION
+   * ========================================== -->
+  <%- include('../partials/customer-header') %>
+
+  <div class="page-top">
+    <a class="back" href="/table/<%= table.Table_ID %>/cart" aria-label="กลับไปแก้ไขตะกร้า">←</a>
+    <h2>สรุปรายการสั่งซื้อ</h2>
+  </div>
+  <p class="muted" style="margin:0 16px 12px">ตรวจสอบรายการให้ถูกต้องก่อนชำระเงิน</p>
+
+  <!-- ==========================================
+   * SECTION 3: READ-ONLY ITEM LIST
+   * ========================================== -->
+  <!-- ตารางแสดงรายการสินค้าแบบอ่านอย่างเดียว -->
+  <div class="cart-list">
+    <% items.forEach(function (it) { %>
+      <div class="cart-item">
+
+        <!-- รูปภาพเมนู หรือไอคอนหมวดหมู่ -->
+        <div class="row-img">
+          <% if (it.Image_URL) { %>
+            <img src="<%= it.Image_URL %>" alt="<%= it.Menu_Name %>" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">
+          <% } else { %>
+            <%= CATEGORY_ICON[it.Category_Name] || '🍽️' %>
+          <% } %>
+        </div>
+
+        <!-- รายละเอียดรายการอาหาร -->
+        <div class="row-info">
+          <h4><%= it.Menu_Name %></h4>
+
+          <!-- แสดงประเภทน้ำซุปกรณีซุปผสม 2 ประเภท -->
+          <% if (it.Soup_Type && (it.Menu_Name.includes('2') || it.Soup_Type.includes('+'))) { %>
+            <small class="muted" style="display:block; color:#555; margin-top:2px;">น้ำซุป: <%= it.Soup_Type %></small>
+          <% } %>
+
+          <% if (it.Spiciness_Level) { %><small class="link-red">🌶 <%= it.Spiciness_Level %></small><% } %>
+
+          <small class="muted">จำนวน <%= it.Quantity %> ชุด<%= it.Special_Note ? ' · ' + it.Special_Note : '' %></small>
+        </div>
+
+        <span class="row-price"><%= baht(it.Subtotal) %> บาท</span>
+      </div>
+    <% }) %>
+  </div>
+
+  <!-- ==========================================
+   * SECTION 4: TOTAL PRICE & CHECKOUT BUTTON
+   * ========================================== -->
+  <!-- ยอดรวมราคาทั้งหมด -->
+  <div class="total-row"><span>ยอดรวมทั้งหมด</span><strong><%= baht(total) %> บาท</strong></div>
+
+  <!-- ปุ่มกดยืนยันเพื่อเข้าสู่หน้าชำระเงิน -->
+  <form class="bottom-bar" method="post" action="/table/<%= table.Table_ID %>/checkout">
+    <button class="bar-btn" type="submit" style="justify-content:center">ชำระเงิน</button>
+  </form>
+</div>
+</body>
+</html>
