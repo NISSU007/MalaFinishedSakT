@@ -70,6 +70,7 @@ function ownsOrder(table, order) {
 /* Middleware สำหรับจดจำ Table_ID และ Order_type ลงใน Session ผู้ใช้ */
 router.use('/table/:tableId', (req, res, next) => {
   if (req.params.tableId) {
+    const tableChanged = req.session.tableId !== req.params.tableId;
     if (req.session.tableId && req.session.tableId !== req.params.tableId) {
       req.session.cart = [];
     }
@@ -77,7 +78,7 @@ router.use('/table/:tableId', (req, res, next) => {
     req.session.tableId = req.params.tableId;
     if (req.params.tableId === 'takeaway' || req.query.type === 'takeaway') {
       req.session.orderType = 'กลับบ้าน';
-    } else if (!req.session.orderType) {
+    } else if (tableChanged || !req.session.orderType) {
       req.session.orderType = 'ทานที่ร้าน';
     }
   }
